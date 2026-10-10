@@ -1,0 +1,97 @@
+# Linux 服务器部署指引
+
+以下以 Ubuntu / Debian（x86_64）+ systemd 为例。
+
+## 1. 准备环境
+
+```bash
+sudo apt update
+sudo apt install -y openjdk-17-jre-headless
+java -version
+```
+
+## 2. 构建 jar
+
+在本地或 CI 中执行：
+
+```bash
+mvn -B clean package
+```
+
+产物位于 `target/ezviz-camera-console-1.0.0.jar`，也可从 GitHub Actions 的 `java-app` 产物下载。
+
+## 3. 上传文件
+
+```bash
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin ezviz
+sudo mkdir -p /opt/ezviz-camera-console /etc/ezviz-camera-console
+sudo cp ezviz-camera-console-1.0.0.jar /opt/ezviz-camera-console/ezviz-camera-console.jar
+sudo cp deploy/ezviz-camera-console.service /etc/systemd/system/
+sudo cp deploy/ezviz.env.example /etc/ezviz-camera-console/ezviz.env
+sudo chown -R ezviz:ezviz /opt/ezviz-camera-console
+sudo chmod 600 /etc/ezviz-camera-console/ezviz.env
+sudo chown ezviz:ezviz /etc/ezviz-camera-console/ezviz.env
+```
+
+编辑 `/etc/ezviz-camera-console/ezviz.env`，填入真实的 `EZVIZ_APP_KEY` 和 `EZVIZ_APP_SECRET`。
+
+## 4. 启动服务
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now ezviz-camera-console
+sudo systemctl status ezviz-camera-console
+```
+
+查看日志：
+
+```bash
+sudo journalctl -u ezviz-camera-console -f
+```
+
+验证：
+
+```bash
+curl http://127.0.0.1:8080/api/ezviz/token
+curl http://127.0.0.1:8080/api/ezviz/devices
+```
+
+## 5. 配置 Nginx（可选）
+
+```bash
+sudo apt install -y nginx
+sudo cp deploy/nginx-ezviz-camera-console.conf /etc/nginx/sites-available/ezviz-camera-console
+sudo ln -s /etc/nginx/sites-available/ezviz-camera-console /etc/nginx/sites-enabled/
+sudo sed -i 's/your.domain.com/你的域名/' /etc/nginx/sites-available/ezviz-camera-console
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+HTTPS 可使用 Certbot：
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d 你的域名
+```
+
+## 6. 更新版本
+
+重新上传 jar 后执行：
+
+```bash
+sudo systemctl restart ezviz-camera-console
+```
+
+## 7. 防火墙
+
+若未使用 Nginx，需开放 8080 端口；使用 Nginx 时开放 80/443 即可，不要将 8080 暴露到公网。
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+## 注意事项
+
+- 凭据只保存在服务器的 `/etc/ezviz-camera-console/ezviz.env` 中，不要提交到仓库。
+- 访问页面：`http://服务器地址/index.html`（或配置域名后的地址）。
+- 萤石云 API 地址需与账号所在区域一致。

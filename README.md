@@ -85,6 +85,10 @@ java -jar target/ezviz-camera-console-1.0.0.jar
 
 当前工作流只构建，不部署。
 
+## 部署到 Linux 服务器
+
+详见 [deploy/README.md](deploy/README.md)，包含 systemd 服务、环境变量模板和 Nginx 反向代理配置。
+
 ## 部署到 Azure App Service（可选）
 
 如需自动部署，先完成以下准备，再在工作流中恢复部署任务。

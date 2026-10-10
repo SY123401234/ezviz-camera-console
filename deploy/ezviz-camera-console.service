@@ -1,0 +1,17 @@
+[Unit]
+Description=EZVIZ Camera Console
+After=network.target
+
+[Service]
+Type=simple
+User=ezviz
+Group=ezviz
+WorkingDirectory=/opt/ezviz-camera-console
+EnvironmentFile=/etc/ezviz-camera-console/ezviz.env
+ExecStart=/usr/bin/java -jar /opt/ezviz-camera-console/ezviz-camera-console.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
