@@ -90,8 +90,18 @@ sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 ```
 
+## 8. GitHub Actions 自动部署（可选）
+
+`deploy/github-actions-ssh-deploy.yml.example` 提供了构建后通过 SSH 上传 jar 并重启服务的示例。
+
+1. 在服务器上为部署用户配置 SSH 公钥，并允许该用户免密执行 `systemctl restart ezviz-camera-console` 及 `mv`、`chown` 命令（通过 `sudo`）。
+2. 在仓库 Settings → Secrets and variables → Actions 中添加 `SERVER_HOST`、`SERVER_USER`、`SERVER_SSH_KEY`，可选添加 `SERVER_PORT`。
+3. 将示例文件复制到 `.github/workflows/ezviz-deploy.yml`，然后在 Actions 页面手动运行。
+
+该示例默认只通过 `workflow_dispatch` 手动触发，确认无误后可改为 `push` 触发。
+
 ## 注意事项
 
-- 凭据只保存在服务器的 `/etc/ezviz-camera-console/ezviz.env` 中，不要提交到仓库。
+- 凭据只保存在服务器的
 - 访问页面：`http://服务器地址/index.html`（或配置域名后的地址）。
 - 萤石云 API 地址需与账号所在区域一致。
