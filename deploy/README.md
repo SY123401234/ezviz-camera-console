@@ -56,7 +56,19 @@ curl http://127.0.0.1:8080/api/ezviz/token
 curl http://127.0.0.1:8080/api/ezviz/devices
 ```
 
-## 5. 配置 Nginx（可选）
+## 5. 配置反向代理与 HTTPS（可选）
+
+### 方式 A：使用 1Panel（推荐，服务器已安装 1Panel 时）
+
+1. 在 1Panel 左侧进入 **网站 → 创建网站 → 反向代理**。
+2. 域名填写你的域名，代理地址填写 `http://127.0.0.1:8080`。
+3. 在该网站的 **HTTPS** 页签中申请 Let's Encrypt 证书，并开启强制 HTTPS。
+4. 在 1Panel 的 **防火墙** 中仅开放 80/443，不要开放 8080。
+5. 访问 `https://你的域名/index.html` 验证。
+
+1Panel 自带 OpenResty，无需手动安装 Nginx。systemd 服务仍由命令行管理，与 1Panel 不冲突。
+
+### 方式 B：手动配置 Nginx
 
 ```bash
 sudo apt install -y nginx
