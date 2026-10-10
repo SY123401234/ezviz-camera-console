@@ -51,7 +51,7 @@ AppKey / AppSecret 只保存在后端环境变量中，不会暴露给前端。
 |----------|------|--------|------|
 | `EZVIZ_APP_KEY` | 是 | 空 | 萤石云开放平台 AppKey |
 | `EZVIZ_APP_SECRET` | 是 | 空 | 萤石云开放平台 AppSecret |
-| `EZVIZ_BASE_URL` | 否 | `https://open.ezvizlife.com` | 萤石云 API 地址，按账号所在区域调整 |
+| `EZVIZ_BASE_URL` | 否 | `https://open.ezvizlife.com` | 萤石云 API 地址，按账号所在区域调整。**不能设置为空值**，否则会报 `URI is not absolute` 并返回 500 |
 | `PORT` | 否 | `8080` | 服务端口 |
 
 凭据未配置时，服务可以启动，但调用萤石云接口会失败。
