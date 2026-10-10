@@ -104,7 +104,7 @@ sudo ufw allow 443/tcp
 
 ## 8. GitHub Actions 自动部署（可选）
 
-`deploy/github-actions-ssh-deploy.yml.example` 提供了构建后通过 SSH 上传 jar 并重启服务的示例。
+`deploy/github-actions-ssh-deploy.example.yml` 提供了构建后通过 SSH 上传 jar 并重启服务的示例。
 
 1. 在服务器上为部署用户配置 SSH 公钥，并允许该用户免密执行 `systemctl restart ezviz-camera-console` 及 `mv`、`chown` 命令（通过 `sudo`）。
 2. 在仓库 Settings → Secrets and variables → Actions 中添加 `SERVER_HOST`、`SERVER_USER`、`SERVER_SSH_KEY`，可选添加 `SERVER_PORT`。
