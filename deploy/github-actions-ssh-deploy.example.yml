@@ -1,0 +1,68 @@
+# 示例：构建后通过 SSH 部署到 Linux 服务器（含 1Panel 服务器）
+# 使用前请将本文件复制到 .github/workflows/ 下，并在仓库 Secrets 中配置以下变量：
+#   SERVER_HOST      服务器 IP 或域名
+#   SERVER_USER      SSH 登录用户
+#   SERVER_SSH_KEY   SSH 私钥内容
+#   SERVER_PORT      SSH 端口（可选，默认 22）
+
+name: Deploy to Linux server
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build
+        run: mvn -B clean package --file pom.xml
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-app
+          path: target/*.jar
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: java-app
+          path: dist
+
+      - name: Copy jar to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          source: "dist/*.jar"
+          target: "/tmp"
+          strip_components: 1
+
+      - name: Restart service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            sudo mv /tmp/*.jar /opt/ezviz-camera-console/ezviz-camera-console.jar
+            sudo chown ezviz:ezviz /opt/ezviz-camera-console/ezviz-camera-console.jar
+            sudo systemctl restart ezviz-camera-console
