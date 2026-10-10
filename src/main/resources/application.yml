@@ -1,0 +1,7 @@
+server:
+  port: ${PORT:8080}
+
+ezviz:
+  base-url: ${EZVIZ_BASE_URL:https://open.ezvizlife.com}
+  app-key: ${EZVIZ_APP_KEY:}
+  app-secret: ${EZVIZ_APP_SECRET:}

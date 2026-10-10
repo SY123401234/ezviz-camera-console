@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>萤石云摄像头控制台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; }
+        .header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 1.2rem 2rem; display: flex; align-items: center; gap: 1rem; }
+        .header h1 { font-size: 1.3rem; }
+        .header .logo { color: #4fc3f7; font-weight: 700; }
+        .container { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem; display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); overflow: hidden; }
+        .card-header { padding: 1rem 1.5rem; border-bottom: 1px solid #f0f0f0; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 1.5rem; }
+        .btn { padding: 0.55rem 1.1rem; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+        .btn-primary { background: #4fc3f7; color: white; }
+        .btn-primary:hover { background: #29b6f6; }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+        .video-container { background: #000; border-radius: 8px; overflow: hidden; min-height: 450px; display: flex; align-items: center; justify-content: center; }
+        .video-container iframe { width: 100%; height: 500px; border: none; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .status-dot.online { background: #4caf50; }
+        .status-dot.offline { background: #f44336; }
+        .device-list { max-height: 400px; overflow-y: auto; }
+        .device-item { padding: 0.8rem 1rem; border-bottom: 1px solid #f5f5f5; cursor: pointer; transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; }
+        .device-item:hover { background: #f8f9fa; }
+        .device-item.active { background: #e3f2fd; border-left: 3px solid #4fc3f7; }
+        .device-item .name { font-size: 0.9rem; font-weight: 500; }
+        .device-item .serial { font-size: 0.75rem; color: #999; margin-top: 2px; }
+        .ptz-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .ptz-pad { position: relative; width: 180px; height: 180px; }
+        .ptz-pad .arrow { position: absolute; width: 50px; height: 50px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; transition: all 0.15s; font-size: 1.1rem; color: #555; }
+        .ptz-pad .arrow:hover { background: #4fc3f7; color: white; border-color: #4fc3f7; }
+        .ptz-pad .arrow:active { transform: scale(0.92); background: #0288d1; }
+        .ptz-pad .arrow.up { top: 0; left: 50%; transform: translateX(-50%); }
+        .ptz-pad .arrow.down { bottom: 0; left: 50%; transform: translateX(-50%); }
+        .ptz-pad .arrow.left { left: 0; top: 50%; transform: translateY(-50%); }
+        .ptz-pad .arrow.right { right: 0; top: 50%; transform: translateY(-50%); }
+        .ptz-pad .center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 50px; height: 50px; background: #f44336; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.65rem; cursor: pointer; font-weight: 600; }
+        .speed-slider { width: 100%; }
+        .speed-slider label { display: flex; justify-content: space-between; font-size: 0.85rem; color: #666; margin-bottom: 0.3rem; }
+        .speed-slider input[type="range"] { width: 100%; accent-color: #4fc3f7; }
+        .log-area { background: #1a1a2e; color: #4fc3f7; font-family: 'Menlo', monospace; font-size: 0.75rem; padding: 1rem; max-height: 180px; overflow-y: auto; border-radius: 8px; }
+        .log-area .error { color: #f44336; }
+        .log-area .success { color: #4caf50; }
+        .log-area .info { color: #90caf9; }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="logo">萤石云</span>
+        <h1>摄像头控制台</h1>
+    </div>
+
+    <div class="container">
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div class="card">
+                <div class="card-header">
+                    📹 实时预览
+                    <span id="statusBadge"><span class="status-dot offline"></span>未连接</span>
+                </div>
+                <div style="padding: 0;">
+                    <div class="video-container" id="videoBox">
+                        <div style="color: #666; text-align: center;">
+                            <div style="font-size: 3rem;">📹</div>
+                            <div>选择设备开始预览</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    📋 操作日志
+                    <button class="btn btn-sm" onclick="clearLog()">清空</button>
+                </div>
+                <div style="padding: 0;">
+                    <div class="log-area" id="logArea"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div class="card">
+                <div class="card-header">
+                    📱 设备列表
+                    <button class="btn btn-primary btn-sm" onclick="loadDevices()">刷新</button>
+                </div>
+                <div style="padding: 0;">
+                    <div class="device-list" id="deviceList">
+                        <div style="padding: 2rem; text-align: center; color: #999;">点击"刷新"加载设备</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">🕹️ 云台控制</div>
+                <div class="card-body">
+                    <div class="ptz-container">
+                        <div class="ptz-pad">
+                            <div class="arrow up" onmousedown="ptzStart('up')" onmouseup="ptzStop()" onmouseleave="ptzStop()" ontouchstart="ptzStart('up')" ontouchend="ptzStop()">▲</div>
+                            <div class="arrow down" onmousedown="ptzStart('down')" onmouseup="ptzStop()" onmouseleave="ptzStop()" ontouchstart="ptzStart('down')" ontouchend="ptzStop()">▼</div>
+                            <div class="arrow left" onmousedown="ptzStart('left')" onmouseup="ptzStop()" onmouseleave="ptzStop()" ontouchstart="ptzStart('left')" ontouchend="ptzStop()">◀</div>
+                            <div class="arrow right" onmousedown="ptzStart('right')" onmouseup="ptzStop()" onmouseleave="ptzStop()" ontouchstart="ptzStart('right')" ontouchend="ptzStop()">▶</div>
+                            <div class="center" onclick="ptzStop()">STOP</div>
+                        </div>
+                        <div class="speed-slider">
+                            <label><span>速度</span><span id="speedVal">5</span></label>
+                            <input type="range" min="1" max="7" value="5" id="speedRange" oninput="document.getElementById('speedVal').textContent=this.value">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var selectedDevice = null;
+        var selectedChannel = 1;
+        var currentDevices = [];
+
+        function log(msg, type) {
+            type = type || 'info';
+            var el = document.getElementById('logArea');
+            var time = new Date().toLocaleTimeString();
+            el.innerHTML += '<div class="' + type + '">[' + time + '] ' + msg + '</div>';
+            el.scrollTop = el.scrollHeight;
+        }
+        function clearLog() { document.getElementById('logArea').innerHTML = ''; }
+
+        function loadDevices() {
+            fetch('/api/ezviz/devices?pageStart=0&pageSize=50')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.code !== '200' && data.code !== 200) { log('加载失败: ' + data.msg, 'error'); return; }
+                    var devices = data.data || [];
+                    var list = document.getElementById('deviceList');
+                    if (!devices.length) { list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999;">暂无设备</div>'; return; }
+                    currentDevices = devices;
+                    list.innerHTML = devices.map(function(d, i) {
+                        return '<div class="device-item" onclick="pickDevice(' + i + ', this)">' +
+                            '<div><div class="name">' + (d.channelName||'Camera') + '</div><div class="serial">' + d.deviceSerial + '</div></div>' +
+                            '<span class="status-dot ' + (d.status===1?'online':'offline') + '"></span></div>';
+                    }).join('');
+                    log('加载 ' + devices.length + ' 个设备', 'success');
+                })
+                .catch(function(e) { log('加载失败: ' + e.message, 'error'); });
+        }
+
+        function pickDevice(index, el) {
+            var d = currentDevices[index];
+            selectDevice(d.deviceSerial, d.channelNo || 1, d.channelName || d.deviceSerial, el);
+        }
+
+        function selectDevice(serial, channel, name, el) {
+            selectedDevice = serial;
+            selectedChannel = channel;
+            document.querySelectorAll('.device-item').forEach(function(c) { c.classList.remove('active'); });
+            el.classList.add('active');
+            log('选择: ' + name + ' (' + serial + ')', 'info');
+            startPreview();
+        }
+
+        function startPreview() {
+            if (!selectedDevice) { log('请先选择设备', 'error'); return; }
+            // 获取accessToken和播放地址
+            fetch('/api/ezviz/live?deviceSerial=' + selectedDevice + '&channelNo=' + selectedChannel + '&quality=1')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.data || !data.data.url) { log('获取直播失败: ' + (data.msg||JSON.stringify(data)), 'error'); return; }
+                    var ezopenUrl = data.data.url;
+                    var accessToken = data.data.accessToken || '';
+                    log('播放地址: ' + ezopenUrl, 'success');
+
+                    // 如果没有token，从后端获取
+                    if (!accessToken) {
+                        fetch('/api/ezviz/token').then(function(r){return r.json();}).then(function(t){
+                            playWithShare(t.accessToken || accessToken, ezopenUrl);
+                        }).catch(function(){ playWithShare(accessToken, ezopenUrl); });
+                    } else {
+                        playWithShare(accessToken, ezopenUrl);
+                    }
+                })
+                .catch(function(e) { log('播放失败: ' + e.message, 'error'); });
+        }
+
+        function playWithShare(accessToken, ezopenUrl) {
+            var shareUrl = 'https://openstatic.ys7.com/ezuikit_share/index.html'
+                + '?accessToken=' + encodeURIComponent(accessToken)
+                + '&url=' + encodeURIComponent(ezopenUrl)
+                + '&themeId=pcLive';
+
+            var box = document.getElementById('videoBox');
+            box.innerHTML = '<iframe src="' + shareUrl + '" width="100%" height="500" allowfullscreen allow="microphone;autoplay;fullscreen"></iframe>';
+            document.getElementById('statusBadge').innerHTML = '<span class="status-dot online"></span>播放中';
+            log('萤石云播放器已加载', 'success');
+        }
+
+        function ptzStart(direction) {
+            if (!selectedDevice) { log('请先选择设备', 'error'); return; }
+            var speed = parseInt(document.getElementById('speedRange').value);
+            log('云台: ' + direction + ' (速度' + speed + ')', 'info');
+            fetch('/api/ezviz/ptz?deviceSerial=' + selectedDevice + '&channelNo=' + selectedChannel + '&action=' + direction + '&speed=' + speed, { method: 'POST' })
+                .catch(function(e) { log('云台控制失败: ' + e.message, 'error'); });
+        }
+        function ptzStop() {
+            if (!selectedDevice) return;
+            fetch('/api/ezviz/ptz/stop?deviceSerial=' + selectedDevice + '&channelNo=' + selectedChannel, { method: 'POST' })
+                .catch(function(e) { log('停止云台失败: ' + e.message, 'error'); });
+        }
+
+        document.addEventListener('keydown', function(e) {
+            var m = {ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
+            if (m[e.key]) { e.preventDefault(); if (!e.repeat) ptzStart(m[e.key]); }
+        });
+        document.addEventListener('keyup', function(e) {
+            var m = {ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
+            if (m[e.key]) { e.preventDefault(); ptzStop(); }
+        });
+
+        log('控制台已就绪', 'info');
+        loadDevices();
+    </script>
+</body>
+</html>

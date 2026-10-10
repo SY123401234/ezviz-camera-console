@@ -24,8 +24,8 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: your-app-name    # set this to your application's name
-  AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
-  NODE_VERSION: '20.x'                # set this to the node version to use
+  AZURE_WEBAPP_PACKAGE_PATH: '*.jar'  # jar file to deploy (artifact is downloaded to the root)
+  JAVA_VERSION: '17'                  # Java version used to build the Spring Boot app
 
 permissions:
   contents: read
@@ -36,23 +36,21 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
+    - name: Set up JDK
+      uses: actions/setup-java@v4
       with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: 'maven'
 
-    - name: npm install, build, and test
-      run: |
-        npm install
-        npm run build --if-present
-        npm run test --if-present
+    - name: Build and test with Maven
+      run: mvn -B package --file pom.xml
 
     - name: Upload artifact for deployment job
       uses: actions/upload-artifact@v4
       with:
-        name: node-app
-        path: .
+        name: java-app
+        path: target/*.jar
 
   deploy:
     permissions:
@@ -67,8 +65,7 @@ jobs:
     - name: Download artifact from build job
       uses: actions/download-artifact@v4
       with:
-        name: node-app
-
+        name: java-app
     - name: 'Deploy to Azure WebApp'
       id: deploy-to-webapp
       uses: azure/webapps-deploy@v2

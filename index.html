@@ -101,10 +101,10 @@
                 <div class="card-body">
                     <div class="ptz-container">
                         <div class="ptz-pad">
-                            <div class="arrow up" onmousedown="ptzStart('up')" onmouseup="ptzStop()" ontouchstart="ptzStart('up')" ontouchend="ptzStop()">▲</div>
-                            <div class="arrow down" onmousedown="ptzStart('down')" onmouseup="ptzStop()" ontouchstart="ptzStart('down')" ontouchend="ptzStop()">▼</div>
-                            <div class="arrow left" onmousedown="ptzStart('left')" onmouseup="ptzStop()" ontouchstart="ptzStart('left')" ontouchend="ptzStop()">◀</div>
-                            <div class="arrow right" onmousedown="ptzStart('right')" onmouseup="ptzStop()" ontouchstart="ptzStart('right')" ontouchend="ptzStop()">▶</div>
+                            <div class="arrow up" onmousedown="ptzStart('up')" onmouseup="ptzStop()" onmouseleave="ptzStop()" ontouchstart="ptzStart('up')" ontouchend="ptzStop()">▲</div>
+                            <div class="arrow down" onmousedown="ptzStart('down')" onmouseup="ptzStop()" onmouseleave="ptzStop()" ontouchstart="ptzStart('down')" ontouchend="ptzStop()">▼</div>
+                            <div class="arrow left" onmousedown="ptzStart('left')" onmouseup="ptzStop()" onmouseleave="ptzStop()" ontouchstart="ptzStart('left')" ontouchend="ptzStop()">◀</div>
+                            <div class="arrow right" onmousedown="ptzStart('right')" onmouseup="ptzStop()" onmouseleave="ptzStop()" ontouchstart="ptzStart('right')" ontouchend="ptzStop()">▶</div>
                             <div class="center" onclick="ptzStop()">STOP</div>
                         </div>
                         <div class="speed-slider">
@@ -120,6 +120,7 @@
     <script>
         var selectedDevice = null;
         var selectedChannel = 1;
+        var currentDevices = [];
 
         function log(msg, type) {
             type = type || 'info';
@@ -138,14 +139,20 @@
                     var devices = data.data || [];
                     var list = document.getElementById('deviceList');
                     if (!devices.length) { list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999;">暂无设备</div>'; return; }
-                    list.innerHTML = devices.map(function(d) {
-                        return '<div class="device-item" onclick="selectDevice(\'' + d.deviceSerial + '\', ' + (d.channelNo||1) + ', \'' + (d.channelName||d.deviceSerial) + '\', this)">' +
+                    currentDevices = devices;
+                    list.innerHTML = devices.map(function(d, i) {
+                        return '<div class="device-item" onclick="pickDevice(' + i + ', this)">' +
                             '<div><div class="name">' + (d.channelName||'Camera') + '</div><div class="serial">' + d.deviceSerial + '</div></div>' +
                             '<span class="status-dot ' + (d.status===1?'online':'offline') + '"></span></div>';
                     }).join('');
                     log('加载 ' + devices.length + ' 个设备', 'success');
                 })
                 .catch(function(e) { log('加载失败: ' + e.message, 'error'); });
+        }
+
+        function pickDevice(index, el) {
+            var d = currentDevices[index];
+            selectDevice(d.deviceSerial, d.channelNo || 1, d.channelName || d.deviceSerial, el);
         }
 
         function selectDevice(serial, channel, name, el) {
@@ -196,16 +203,18 @@
             if (!selectedDevice) { log('请先选择设备', 'error'); return; }
             var speed = parseInt(document.getElementById('speedRange').value);
             log('云台: ' + direction + ' (速度' + speed + ')', 'info');
-            fetch('/api/ezviz/ptz?deviceSerial=' + selectedDevice + '&channelNo=' + selectedChannel + '&action=' + direction + '&speed=' + speed, { method: 'POST' });
+            fetch('/api/ezviz/ptz?deviceSerial=' + selectedDevice + '&channelNo=' + selectedChannel + '&action=' + direction + '&speed=' + speed, { method: 'POST' })
+                .catch(function(e) { log('云台控制失败: ' + e.message, 'error'); });
         }
         function ptzStop() {
             if (!selectedDevice) return;
-            fetch('/api/ezviz/ptz/stop?deviceSerial=' + selectedDevice + '&channelNo=' + selectedChannel, { method: 'POST' });
+            fetch('/api/ezviz/ptz/stop?deviceSerial=' + selectedDevice + '&channelNo=' + selectedChannel, { method: 'POST' })
+                .catch(function(e) { log('停止云台失败: ' + e.message, 'error'); });
         }
 
         document.addEventListener('keydown', function(e) {
             var m = {ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
-            if (m[e.key]) { e.preventDefault(); ptzStart(m[e.key]); }
+            if (m[e.key]) { e.preventDefault(); if (!e.repeat) ptzStart(m[e.key]); }
         });
         document.addEventListener('keyup', function(e) {
             var m = {ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
